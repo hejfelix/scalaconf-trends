@@ -65,7 +65,7 @@ class ScalaDaysScraper extends ScalaConfScraper {
 
   private def slotsForSchedule(schedule: Element): Seq[Element] = schedule >> elementList(".slots")
 
-  def scrape(htmlPath: String, year: Int) =
+  def scrape(htmlPath: String, year: Int): Seq[Talk] =
     findDays(process(htmlPath)).flatMap(talksForSchedule(year))
 
   private def talksForSchedule(year: Int)(schedule: Element) = {
