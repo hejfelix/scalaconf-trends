@@ -65,6 +65,22 @@ class ScalaDaysScraperSpec extends WordSpec with Matchers {
 
   }
 
+  "ScalaDays2013Scraper" should {
+
+    "find 41 talks for 2013 NYC" in {
+
+      val timeZone       = ZoneId.of("GMT-5")
+      val scraper        = new ScalaDays2013Scraper()
+      val yearOfTestFile = 2013
+
+      val talks =
+        scraper.scrape("src/test/resources/ScalaDays2013NYC.html", yearOfTestFile, timeZone)
+      println(talks.mkString("\n"))
+      talks should have size 41
+    }
+
+  }
+
   "extra" should {
     "word count" in {
       case class Resource(year: Int, path: String, timeZone: ZoneId)
@@ -81,9 +97,14 @@ class ScalaDaysScraperSpec extends WordSpec with Matchers {
       val talks: Seq[Talk] = resources.flatMap(r =>
         scraper.scrape(s"src/test/resources/${r.path}.html", r.year, r.timeZone))
 
+      val talks2013 = new ScalaDays2013Scraper()
+        .scrape("src/test/resources/ScalaDays2013NYC.html", 2013, ZoneId.of("GMT-5"))
+
+      val allTalks = talks ++ talks2013
+
       val maxEntries                                = 20
-      val top20Words: Seq[String]                   = topTitleWords(maxEntries)(talks)
-      val top20SpeakersByNumber: Seq[(String, Int)] = topSpeakersByNumber(maxEntries)(talks)
+      val top20Words: Seq[String]                   = topTitleWords(maxEntries)(allTalks)
+      val top20SpeakersByNumber: Seq[(String, Int)] = topSpeakersByNumber(maxEntries)(allTalks)
 
       println("Top 20 speakers by number of talks:")
       println(
@@ -122,7 +143,15 @@ class ScalaDaysScraperSpec extends WordSpec with Matchers {
         .fromFile("src/test/resources/stopwords.lsv")
         .getLines()
         .map(_.trim.toLowerCase)
-        .toSeq ++ Seq("scala", "programming", "-")
+        .toSeq ++ Seq("scala",
+                      "scala:",
+                      "programming",
+                      "-",
+                      "beyond",
+                      "using",
+                      "code",
+                      "new",
+                      "road")
 
     val words: Map[String, Int] = talks
       .flatMap(_.subject.split("\\s+").map(_.toLowerCase))
