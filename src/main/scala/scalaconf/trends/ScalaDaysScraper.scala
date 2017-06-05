@@ -58,7 +58,7 @@ class ScalaDaysScraper extends ScalaConfScraper {
   private def elementToTalk(time: Instant)(element: Element) = {
     val speaker = element >?> text(".speaker")
     val twitter = element >?> text(".twitter")
-    val company = element >?> text(".speakercompany")
+    val company = (element >?> text(".speakercompany")).filter(_.nonEmpty)
     val subject = element >> text(".subject")
     Talk(time, speaker.mkString, company, subject, twitter)
   }
