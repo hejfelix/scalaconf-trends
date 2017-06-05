@@ -1,4 +1,4 @@
-package example
+package scalaconf.trends
 
 import model.Talk
 import net.ruippeixotog.scalascraper.browser.{Browser, JsoupBrowser}
@@ -6,7 +6,7 @@ import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.model.Element
 
-class Scraper {
+class ScalaDaysScraper extends ScalaConfScraper {
 
   private def process(htmlPath: String): Browser#DocumentType =
     JsoupBrowser().parseFile("src/test/resources/ScalaDays2017.html")
@@ -61,19 +61,19 @@ class Scraper {
     Talk(time, speaker.mkString, company, subject, twitter)
   }
 
-  def timeOfSlot(slot: Element) = slot >> text(".time")
+  private def timeOfSlot(slot: Element) = slot >> text(".time")
 
-  def slotsForSchedule(schedule: Element): Seq[Element] = schedule >> elementList(".slots")
+  private def slotsForSchedule(schedule: Element): Seq[Element] = schedule >> elementList(".slots")
 
   def scrape(htmlPath: String, year: Int) =
-    findDays(process(htmlPath))
-      .flatMap(schedule => {
-        val caption = schedule >> text("caption")
-        val month   = monthOfCaption(caption).getOrElse(-1)
-        val day     = dayOfCaption(caption)
-        val slots   = slotsForSchedule(schedule)
-        slots.flatMap(slot =>
-          findTalks(slot).map(elementToTalk(year, month, day, timeOfSlot(slot).toString)))
-      })
+    findDays(process(htmlPath)).flatMap(talksForSchedule(year))
 
+  private def talksForSchedule(year: Int)(schedule: Element) = {
+    val caption = schedule >> text("caption")
+    val month   = monthOfCaption(caption).getOrElse(-1)
+    val day     = dayOfCaption(caption)
+    val slots   = slotsForSchedule(schedule)
+    slots.flatMap(slot =>
+      findTalks(slot).map(elementToTalk(year, month, day, timeOfSlot(slot).toString)))
+  }
 }
