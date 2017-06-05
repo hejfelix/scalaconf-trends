@@ -1,5 +1,8 @@
 package scalaconf.trends
 
+import java.time.{Instant, LocalDateTime, ZoneId, ZonedDateTime}
+import java.util.{Calendar, Date}
+
 import model.Talk
 import net.ruippeixotog.scalascraper.browser.{Browser, JsoupBrowser}
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
@@ -9,7 +12,7 @@ import net.ruippeixotog.scalascraper.model.Element
 class ScalaDaysScraper extends ScalaConfScraper {
 
   private def process(htmlPath: String): Browser#DocumentType =
-    JsoupBrowser().parseFile("src/test/resources/ScalaDays2017.html")
+    JsoupBrowser().parseFile(htmlPath)
 
   private def findTalks(element: Element): Seq[Element] =
     element >> elementList(".scheduleClickToPop")
@@ -52,8 +55,7 @@ class ScalaDaysScraper extends ScalaConfScraper {
       .toMap
       .get(month)
 
-  private def elementToTalk(year: Int, month: Int, day: Int, timeOfDay: String)(element: Element) = {
-    val time    = s"$timeOfDay-$day-$month-$year"
+  private def elementToTalk(time: Instant)(element: Element) = {
     val speaker = element >?> text(".speaker")
     val twitter = element >?> text(".twitter")
     val company = element >?> text(".speakercompany")
@@ -61,19 +63,26 @@ class ScalaDaysScraper extends ScalaConfScraper {
     Talk(time, speaker.mkString, company, subject, twitter)
   }
 
-  private def timeOfSlot(slot: Element) = slot >> text(".time")
+  private def timeOfSlot(year: Int, month: Int, day: Int, zoneID: ZoneId)(slot: Element) = {
+    val timeOfDay = slot >> text(".time")
+    val timeSplit = timeOfDay.split(":")
+    val hours     = timeSplit.headOption.map(_.toInt).getOrElse(-1)
+    val minutes   = timeSplit.drop(1).headOption.map(_.toInt).getOrElse(-1)
+    val date = ZonedDateTime.of(year, month, day, hours, minutes, 0, 0, zoneID)
+    date.toInstant
+  }
 
   private def slotsForSchedule(schedule: Element): Seq[Element] = schedule >> elementList(".slots")
 
-  def scrape(htmlPath: String, year: Int): Seq[Talk] =
-    findDays(process(htmlPath)).flatMap(talksForSchedule(year))
+  def scrape(htmlPath: String, year: Int, zoneID: ZoneId): Seq[Talk] =
+    findDays(process(htmlPath)).flatMap(talksForSchedule(year, zoneID))
 
-  private def talksForSchedule(year: Int)(schedule: Element) = {
-    val caption = schedule >> text("caption")
-    val month   = monthOfCaption(caption).getOrElse(-1)
-    val day     = dayOfCaption(caption)
-    val slots   = slotsForSchedule(schedule)
-    slots.flatMap(slot =>
-      findTalks(slot).map(elementToTalk(year, month, day, timeOfSlot(slot).toString)))
+  private def talksForSchedule(year: Int, zoneID: ZoneId)(schedule: Element) = {
+    val caption        = schedule >> text("caption")
+    val month          = monthOfCaption(caption).getOrElse(-1)
+    val day            = dayOfCaption(caption)
+    val slots          = slotsForSchedule(schedule)
+    val slotTimeOnDate = timeOfSlot(year, month, day, zoneID) _
+    slots.flatMap(slot => findTalks(slot).map(elementToTalk(slotTimeOnDate(slot))))
   }
 }

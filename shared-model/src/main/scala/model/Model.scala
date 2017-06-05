@@ -1,8 +1,9 @@
 package model
+import java.time.Instant
 
 sealed trait Model
 
-case class Talk(time: String,
+case class Talk(time: Instant,
                 speaker: String,
                 speakerCompany: Option[String],
                 subject: String,
