@@ -57,7 +57,8 @@ class ScalaDaysScraper extends ScalaConfScraper {
 
   private def elementToTalk(time: Instant)(element: Element) = {
     val speaker = element >?> text(".speaker")
-    val twitter = element >?> text(".twitter")
+    val twitter = (element >?> text(".twitter")).map(handle =>
+      if (!handle.startsWith("@")) s"@$handle" else handle)
     val company = (element >?> text(".speakercompany")).filter(_.nonEmpty)
     val subject = element >> text(".subject")
     Talk(time, speaker.mkString, company, subject, twitter)
@@ -68,7 +69,7 @@ class ScalaDaysScraper extends ScalaConfScraper {
     val timeSplit = timeOfDay.split(":")
     val hours     = timeSplit.headOption.map(_.toInt).getOrElse(-1)
     val minutes   = timeSplit.drop(1).headOption.map(_.toInt).getOrElse(-1)
-    val date = ZonedDateTime.of(year, month, day, hours, minutes, 0, 0, zoneID)
+    val date      = ZonedDateTime.of(year, month, day, hours, minutes, 0, 0, zoneID)
     date.toInstant
   }
 
